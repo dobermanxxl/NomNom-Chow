@@ -62,15 +62,27 @@ The image should look like a parent took a high-quality photo of a real dinner t
       model: "gpt-image-1",
       prompt,
       size: "1024x1024",
-      response_format: "b64_json"
+      n: 1
     } as any);
 
-    const base64 = (response.data?.[0] as any)?.b64_json;
-    if (!base64) {
-      return { imageUrl: "", success: false, error: "Failed to generate image data from AI" };
-    }
+    // Handle response - may return b64_json or url depending on API version
+    const imageData = response.data?.[0] as any;
+    let buffer: Buffer;
     
-    const buffer = Buffer.from(base64, "base64");
+    if (imageData?.b64_json) {
+      // Base64 response
+      buffer = Buffer.from(imageData.b64_json, "base64");
+    } else if (imageData?.url) {
+      // URL response - download the image
+      const imageResponse = await fetch(imageData.url);
+      if (!imageResponse.ok) {
+        return { imageUrl: "", success: false, error: "Failed to download generated image" };
+      }
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } else {
+      return { imageUrl: "", success: false, error: "No image data returned from AI" };
+    }
 
     const imageUrl = await new Promise<string>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
