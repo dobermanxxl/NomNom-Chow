@@ -6,6 +6,20 @@ import { relations } from "drizzle-orm";
 
 // === TABLE DEFINITIONS ===
 
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const meals = pgTable("meals", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -81,6 +95,16 @@ export const insertDraftMealSchema = createInsertSchema(draftMeals).omit({
   createdAt: true
 });
 
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true
+});
+
 // === EXPLICIT API CONTRACT TYPES ===
 
 export type Meal = typeof meals.$inferSelect;
@@ -91,6 +115,11 @@ export type InsertGeneratedRecipe = z.infer<typeof insertGeneratedRecipeSchema>;
 
 export type DraftMeal = typeof draftMeals.$inferSelect;
 export type InsertDraftMeal = z.infer<typeof insertDraftMealSchema>;
+
+export type Conversation = typeof conversations.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 // Request types
 export type CreateMealRequest = InsertMeal;

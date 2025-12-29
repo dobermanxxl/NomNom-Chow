@@ -19,7 +19,7 @@ export default function Admin() {
   const login = useAdminLogin();
   const [, setLocation] = useLocation();
 
-  const onSubmit = (data: { password: string }) => {
+  const onSubmit = (data: any) => {
     login.mutate(data.password, {
       onSuccess: () => setIsAuthenticated(true)
     });

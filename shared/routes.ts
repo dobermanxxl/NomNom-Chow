@@ -1,6 +1,8 @@
 
 import { z } from 'zod';
-import { insertMealSchema, insertDraftMealSchema, insertGeneratedRecipeSchema, meals, generatedRecipes, draftMeals, mealStats } from './schema';
+import { insertMealSchema, insertDraftMealSchema, insertGeneratedRecipeSchema, meals, generatedRecipes, draftMeals, mealStats, type CreateMealRequest, type UpdateMealRequest, type GenerateRecipeRequest, type AIResponse, type InsertDraftMeal } from './schema';
+
+export type { CreateMealRequest, UpdateMealRequest, GenerateRecipeRequest, AIResponse, InsertDraftMeal };
 
 // ============================================
 // SHARED ERROR SCHEMAS
