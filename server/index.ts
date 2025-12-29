@@ -1,15 +1,38 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+
+import type { Request, Response, NextFunction } from "express";
+import { registerRoutes, seed } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import express from "express";
+import session from "express-session";
+import memorystore from "memorystore";
 
 const app = express();
 const httpServer = createServer(app);
+
+// === SESSION SETUP ===
+const MemoryStore = memorystore(session);
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'secret',
+    resave: false,
+    saveUninitialized: false,
+    store: new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+    }),
+    cookie: { secure: false } // Set to true if using HTTPS in production
+}));
 
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
   }
+}
+
+// Extend session type
+declare module "express-session" {
+    interface SessionData {
+        isAdmin: boolean;
+    }
 }
 
 app.use(
@@ -52,6 +75,10 @@ app.use((req, res, next) => {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
       log(logLine);
     }
   });
@@ -60,6 +87,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Register routes (and runs migrations/seeds via our custom logic if needed, though usually migrations are separate)
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -73,11 +101,18 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
+  if (app.get("env") === "development") {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
+  } else {
+    serveStatic(app);
+  }
+
+  // Run seed
+  try {
+      await seed();
+  } catch(e) {
+      console.error("Failed to seed:", e);
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
