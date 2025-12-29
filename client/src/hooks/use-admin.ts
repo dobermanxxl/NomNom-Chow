@@ -98,3 +98,99 @@ export function useApproveDraft() {
     }
   });
 }
+
+// ============================================
+// IMAGE GENERATION HOOKS
+// ============================================
+
+export function useImageStats() {
+  return useQuery({
+    queryKey: [api.admin.imageStats.path],
+    queryFn: async () => {
+      const res = await fetch(api.admin.imageStats.path, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch image stats");
+      return api.admin.imageStats.responses[200].parse(await res.json());
+    },
+    retry: false,
+  });
+}
+
+export function useBatchProgress() {
+  return useQuery({
+    queryKey: [api.admin.batchProgress.path],
+    queryFn: async () => {
+      const res = await fetch(api.admin.batchProgress.path, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch batch progress");
+      return api.admin.batchProgress.responses[200].parse(await res.json());
+    },
+    refetchInterval: 2000,
+    retry: false,
+  });
+}
+
+export function useStartBatchGeneration() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (data: { regenerate?: boolean; mealIds?: number[] }) => {
+      const res = await fetch(api.admin.batchGenerate.path, {
+        method: api.admin.batchGenerate.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to start batch");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Batch Started", description: data.message });
+      queryClient.invalidateQueries({ queryKey: [api.admin.batchProgress.path] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+}
+
+export function useStopBatch() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.admin.stopBatch.path, {
+        method: api.admin.stopBatch.method,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to stop batch");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Stopping", description: "Batch job will stop after current item." });
+    }
+  });
+}
+
+export function useAddSampleMeals() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.admin.addSampleMeals.path, {
+        method: api.admin.addSampleMeals.method,
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to add sample meals");
+      return api.admin.addSampleMeals.responses[200].parse(await res.json());
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.admin.imageStats.path] });
+      toast({ title: "Meals Added", description: data.message });
+    }
+  });
+}

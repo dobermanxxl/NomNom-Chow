@@ -141,13 +141,77 @@ export const api = {
         mealId: z.number().optional(),
         title: z.string(),
         ingredients: z.array(z.string()),
+        cuisine: z.string().optional(),
+        skillLevel: z.string().optional(),
       }),
       responses: {
-        200: z.object({ imageUrl: z.string() }),
+        200: z.object({ imageUrl: z.string(), success: z.boolean(), error: z.string().optional() }),
         400: errorSchemas.validation,
         401: errorSchemas.unauthorized,
         429: z.object({ message: z.string() }),
         500: errorSchemas.internal,
+      }
+    },
+    imageStats: {
+      method: 'GET' as const,
+      path: '/api/admin/image-stats',
+      responses: {
+        200: z.object({
+          totalMeals: z.number(),
+          withImages: z.number(),
+          withoutImages: z.number(),
+          cloudinaryConfigured: z.boolean()
+        }),
+        401: errorSchemas.unauthorized
+      }
+    },
+    batchGenerate: {
+      method: 'POST' as const,
+      path: '/api/admin/batch-generate-images',
+      input: z.object({
+        regenerate: z.boolean().optional(),
+        mealIds: z.array(z.number()).optional()
+      }),
+      responses: {
+        200: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized
+      }
+    },
+    batchProgress: {
+      method: 'GET' as const,
+      path: '/api/admin/batch-progress',
+      responses: {
+        200: z.object({
+          current: z.number(),
+          total: z.number(),
+          currentMealTitle: z.string(),
+          completed: z.number(),
+          failed: z.number(),
+          failures: z.array(z.object({
+            mealId: z.number(),
+            title: z.string(),
+            error: z.string()
+          })),
+          isRunning: z.boolean()
+        }),
+        401: errorSchemas.unauthorized
+      }
+    },
+    stopBatch: {
+      method: 'POST' as const,
+      path: '/api/admin/stop-batch',
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: errorSchemas.unauthorized
+      }
+    },
+    addSampleMeals: {
+      method: 'POST' as const,
+      path: '/api/admin/add-sample-meals',
+      responses: {
+        200: z.object({ added: z.number(), message: z.string() }),
+        401: errorSchemas.unauthorized
       }
     }
   },

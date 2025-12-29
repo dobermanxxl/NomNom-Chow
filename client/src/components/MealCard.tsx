@@ -19,20 +19,17 @@ export function MealCard({ meal, compact = false }: MealCardProps) {
         "hover:shadow-xl hover:-translate-y-1 hover:border-primary/30 group-focus:ring-2 group-focus:ring-primary group-focus:ring-offset-2",
         compact ? "p-4" : "p-0"
       )}>
-        {/* Image Area */}
+        {/* Image Area - 1:1 Square */}
         {!compact && (
-          <div className="aspect-[4/3] overflow-hidden relative bg-muted">
-            {meal.imageUrl ? (
-              <img 
-                src={meal.imageUrl} 
-                alt={meal.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: placeholderGradient }}>
-                <span className="text-6xl animate-pulse">🥘</span>
-              </div>
-            )}
+          <div className="aspect-square overflow-hidden relative bg-muted">
+            <img 
+              src={meal.imageUrl || "/placeholder-meal.svg"} 
+              alt={meal.title}
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/placeholder-meal.svg";
+              }}
+            />
             
             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold text-foreground shadow-sm border border-black/5">
               {meal.skillLevel}

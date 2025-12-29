@@ -6,11 +6,18 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { meals } from "@shared/schema"; // For type reference if needed
-import { generateMealImage } from "./image-service";
+import { 
+  generateMealImage, 
+  isCloudinaryConfigured, 
+  getBatchProgress, 
+  stopBatch, 
+  processBatchImageGeneration,
+  resetBatchProgress
+} from "./image-service";
 
 // Simple rate limiter for image generation
 const imageRateLimits = new Map<string, { count: number; resetAt: number }>();
-const MAX_IMAGES_PER_HOUR = 10;
+const MAX_IMAGES_PER_HOUR = 30;
 
 const checkRateLimit = (id: string) => {
   const now = Date.now();
@@ -223,86 +230,122 @@ export async function registerRoutes(
 
   app.post(api.admin.generateImage.path, requireAdmin, async (req, res) => {
     try {
-      const { mealId, title, ingredients } = api.admin.generateImage.input.parse(req.body);
+      const { mealId, title, ingredients, cuisine, skillLevel } = api.admin.generateImage.input.parse(req.body);
       
       if (!checkRateLimit(req.sessionID || 'anonymous')) {
-        return res.status(429).json({ message: "Image generation limit reached (10/hour). Please try again later." });
+        return res.status(429).json({ message: "Image generation limit reached (30/hour). Please try again later." });
       }
 
-      const imageUrl = await generateMealImage(title, ingredients);
+      const result = await generateMealImage(title, ingredients, cuisine, skillLevel);
       
-      if (mealId) {
-        await storage.updateMeal(mealId, { imageUrl });
+      if (result.success && result.imageUrl && mealId) {
+        await storage.updateMeal(mealId, { imageUrl: result.imageUrl });
         await storage.incrementImageGeneration(mealId);
       }
 
-      res.json({ imageUrl });
+      res.json(result);
     } catch (e) {
       console.error("Image generation failed:", e);
-      res.status(500).json({ message: "Failed to generate image" });
+      res.status(500).json({ message: "Failed to generate image", success: false });
     }
+  });
+
+  // Image stats endpoint
+  app.get(api.admin.imageStats.path, requireAdmin, async (req, res) => {
+    const allMeals = await storage.getMeals();
+    const withImages = allMeals.filter(m => m.imageUrl && m.imageUrl.length > 0).length;
+    res.json({
+      totalMeals: allMeals.length,
+      withImages,
+      withoutImages: allMeals.length - withImages,
+      cloudinaryConfigured: isCloudinaryConfigured()
+    });
+  });
+
+  // Batch generate endpoint
+  app.post(api.admin.batchGenerate.path, requireAdmin, async (req, res) => {
+    const { regenerate, mealIds } = req.body;
+    
+    if (!isCloudinaryConfigured()) {
+      return res.status(400).json({ message: "Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET." });
+    }
+
+    const allMeals = await storage.getMeals();
+    let mealsToProcess = allMeals;
+    
+    if (mealIds && mealIds.length > 0) {
+      mealsToProcess = allMeals.filter(m => mealIds.includes(m.id));
+    } else if (!regenerate) {
+      mealsToProcess = allMeals.filter(m => !m.imageUrl || m.imageUrl.length === 0);
+    }
+
+    if (mealsToProcess.length === 0) {
+      return res.json({ message: "No meals to process" });
+    }
+
+    // Start batch in background
+    processBatchImageGeneration(
+      mealsToProcess.map(m => ({
+        id: m.id,
+        title: m.title,
+        ingredients: (m.ingredients as string[]) || [],
+        cuisine: m.cuisine || undefined,
+        skillLevel: m.skillLevel || undefined
+      })),
+      async (mealId, imageUrl) => {
+        await storage.updateMeal(mealId, { imageUrl });
+      },
+      async (mealId) => {
+        await storage.incrementImageGeneration(mealId);
+      }
+    ).catch(console.error);
+
+    res.json({ message: `Started processing ${mealsToProcess.length} meals` });
+  });
+
+  // Batch progress endpoint
+  app.get(api.admin.batchProgress.path, requireAdmin, (req, res) => {
+    res.json(getBatchProgress());
+  });
+
+  // Stop batch endpoint
+  app.post(api.admin.stopBatch.path, requireAdmin, (req, res) => {
+    stopBatch();
+    res.json({ message: "Batch job stop requested" });
+  });
+
+  // Add sample meals endpoint
+  app.post(api.admin.addSampleMeals.path, requireAdmin, async (req, res) => {
+    const added = await addSampleMeals();
+    res.json({ added, message: `Added ${added} new sample meals` });
   });
 
   return httpServer;
 }
 
+import { sampleMeals } from "./sample-meals";
+
+// === ADD SAMPLE MEALS ===
+async function addSampleMeals(): Promise<number> {
+  const existing = await storage.getMeals();
+  const existingTitles = new Set(existing.map(m => m.title.toLowerCase()));
+  
+  let added = 0;
+  for (const meal of sampleMeals) {
+    if (!existingTitles.has(meal.title.toLowerCase())) {
+      await storage.createMeal(meal);
+      added++;
+    }
+  }
+  return added;
+}
+
 // === SEED DATA ===
 export async function seed() {
-    // Only seed if empty
     const existing = await storage.getMeals();
     if (existing.length === 0) {
-        console.log("Seeding database...");
-        const seedMeals = [
-            {
-                title: "Sheet Pan Chicken & Veggies",
-                description: "One pan, no mess, healthy and colorful.",
-                cuisine: "American",
-                skillLevel: "Easy",
-                timeMinutes: 30,
-                ageRanges: ["2-5", "6-10", "10-13"],
-                dietaryFlags: ["gluten-free"],
-                ingredients: ["Chicken breast", "Broccoli", "Carrots", "Olive oil"],
-                instructions: ["Preheat oven", "Chop veggies", "Bake 20 mins"],
-                imageUrl: "https://images.unsplash.com/photo-1594998893017-361479423561?w=800"
-            },
-            {
-                title: "Mini Meatballs & Spaghetti",
-                description: "Fun-sized meatballs perfect for little hands.",
-                cuisine: "Italian",
-                skillLevel: "Intermediate",
-                timeMinutes: 45,
-                ageRanges: ["2-5", "6-10"],
-                dietaryFlags: [],
-                ingredients: ["Ground beef", "Spaghetti", "Tomato sauce", "Breadcrumbs"],
-                imageUrl: "https://images.unsplash.com/photo-1594998893017-361479423561?w=800" // Placeholder
-            },
-            {
-                title: "Chicken Quesadillas",
-                description: "Cheesy, crispy, and easy to customize.",
-                cuisine: "Mexican",
-                skillLevel: "Easy",
-                timeMinutes: 15,
-                ageRanges: ["2-5", "6-10", "10-13"],
-                dietaryFlags: [],
-                ingredients: ["Tortillas", "Cheese", "Cooked Chicken"],
-                imageUrl: "https://images.unsplash.com/photo-1599354607487-194d27129599?w=800"
-            },
-             {
-                title: "Vegetable Stir Fry",
-                description: "Colorful veggies with mild sauce.",
-                cuisine: "Asian",
-                skillLevel: "Easy",
-                timeMinutes: 20,
-                ageRanges: ["6-10", "10-13"],
-                dietaryFlags: ["vegetarian"],
-                ingredients: ["Broccoli", "Bell peppers", "Soy sauce", "Rice"],
-                imageUrl: "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800"
-            }
-        ];
-        
-        for (const m of seedMeals) {
-            await storage.createMeal(m);
-        }
-        console.log("Seeding complete.");
+        console.log("Seeding database with sample meals...");
+        const added = await addSampleMeals();
+        console.log(`Seeding complete. Added ${added} meals.`);
     }
 }

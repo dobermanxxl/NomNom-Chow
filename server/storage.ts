@@ -79,9 +79,14 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (filters?.search) {
+        const searchTerm = filters.search.toLowerCase();
         conditions.push(or(
-            like(meals.title, `%${filters.search}%`),
-            like(meals.description, `%${filters.search}%`)
+            sql`LOWER(${meals.title}) LIKE ${'%' + searchTerm + '%'}`,
+            sql`LOWER(${meals.description}) LIKE ${'%' + searchTerm + '%'}`,
+            sql`LOWER(${meals.cuisine}) LIKE ${'%' + searchTerm + '%'}`,
+            sql`${meals.ingredients}::text ILIKE ${'%' + searchTerm + '%'}`,
+            sql`${meals.dietaryFlags}::text ILIKE ${'%' + searchTerm + '%'}`,
+            sql`LOWER(${meals.skillLevel}) LIKE ${'%' + searchTerm + '%'}`
         ));
     }
 

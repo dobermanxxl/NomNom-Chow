@@ -1,13 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMeals } from "@/hooks/use-meals";
 import { MealCard } from "@/components/MealCard";
 import { Filters } from "@/components/Filters";
-import { Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { Link } from "wouter";
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 export default function Home() {
   const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [activeFilters, setActiveFilters] = useState({
     ageRange: undefined,
     diet: undefined,
@@ -17,7 +27,7 @@ export default function Home() {
 
   const { data: meals, isLoading, error } = useMeals({
     ...activeFilters,
-    search: search || undefined
+    search: debouncedSearch || undefined
   });
 
   const handleFilterChange = (key: string, value: string | undefined) => {
@@ -41,11 +51,21 @@ export default function Home() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
               <input 
                 type="text"
-                placeholder="Search specifically (e.g. 'pasta')"
-                className="w-full pl-11 pr-4 py-4 rounded-2xl border-2 border-transparent bg-white shadow-lg shadow-primary/5 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all font-medium text-lg placeholder:font-normal"
+                placeholder="Search meals (e.g. 'steak', 'pasta', 'chicken')"
+                data-testid="input-search-meals"
+                className="w-full pl-11 pr-10 py-4 rounded-2xl border-2 border-transparent bg-white dark:bg-card shadow-lg shadow-primary/5 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all font-medium text-lg placeholder:font-normal"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  data-testid="button-clear-search"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
             <button 
               onClick={() => setShowFilters(!showFilters)}
@@ -88,9 +108,15 @@ export default function Home() {
           </div>
         ) : meals?.length === 0 ? (
           <div className="text-center py-20">
-            <h2 className="text-3xl font-display font-bold mb-4">No meals found! 🥕</h2>
-            <p className="text-muted-foreground text-lg mb-8">
-              Try adjusting your filters or search for something else.
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <Search size={32} className="text-muted-foreground" />
+            </div>
+            <h2 className="text-3xl font-display font-bold mb-4">No meals found!</h2>
+            <p className="text-muted-foreground text-lg mb-4">
+              {search ? `No results for "${search}".` : "Try adjusting your filters."}
+            </p>
+            <p className="text-muted-foreground text-sm mb-8">
+              Try searching for: chicken, pasta, tacos, steak, vegetarian
             </p>
             <button 
               onClick={() => {

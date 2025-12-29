@@ -1,0 +1,41 @@
+Update Nom Nom Chow to use Cloudinary for ALL generated meal images (no local filesystem storage), because we will deploy to Vercel soon.
+
+1) Cloudinary integration
+- Implement Cloudinary upload server-side using CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.
+- If any Cloudinary env var is missing, show a clear admin-only error and disable image generation buttons (do not fallback to local saving).
+- Store Cloudinary secure_url into meal.imageUrl.
+
+2) Lock aspect ratio (1:1) consistently
+- All generated images must be stored as 1024x1024 square.
+- If the OpenAI image generation returns a non-square image, transform it in Cloudinary upload using a square crop:
+  - width=1024, height=1024, crop=fill (or crop=thumb with gravity=auto), format=webp (or jpg).
+- On the frontend meal grid + detail pages, enforce 1:1 square thumbnails using a fixed container and object-cover so layout is consistent.
+
+3) Batch image generation (Admin only)
+- Add /admin/images (or an Images section in /admin) to:
+  - show meals missing images
+  - “Generate images for all meals missing images”
+  - progress indicator (# done / total)
+  - failed list + retry
+- Throttle generation (1 request every 3–5 seconds).
+- Rate limit image generation (e.g., 30 per hour per admin session).
+- Skip meals that already have images unless “regenerate” is chosen.
+
+4) Default fallback image
+- Add a kid-friendly placeholder image (static asset) and show it whenever meal.imageUrl is empty (should be rare after batching).
+
+5) Add more meals
+- Expand seed to at least 80 kid-friendly meals.
+- Add an Admin button “Add Sample Meals” that inserts more curated meals without duplicating existing titles.
+
+6) Fix search
+- Ensure the search bar filters meals by case-insensitive matches across:
+  - title, description, cuisine, and ingredients
+- Searching “steak” must return meals where steak appears in title OR ingredients.
+- Implement /api/meals?query=... with Prisma query logic and debounce input on the client (300ms).
+
+7) Safety
+- Admin-only protection enforced for all image generation endpoints.
+- Never expose Cloudinary secrets or OpenAI key to the client.
+
+Apply changes and restart the app.
