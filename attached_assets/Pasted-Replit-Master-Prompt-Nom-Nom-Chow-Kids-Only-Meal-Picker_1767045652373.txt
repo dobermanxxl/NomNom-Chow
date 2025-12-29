@@ -1,0 +1,248 @@
+Replit Master Prompt — Nom Nom Chow (Kids-Only Meal Picker)
+
+Build a production-ready full-stack web app named Nom Nom Chow for parents who want kids-only, headache-free dinners. Domain: nomnomchow.com. The app should be a fast, image-first “pick a meal → get steps + shopping list” experience.
+
+Tech stack (use exactly this)
+
+Frontend: Next.js 14 (App Router) + TypeScript + Tailwind CSS
+
+Backend: Next.js API routes (server actions OK) + Prisma ORM
+
+Database: SQLite for dev (works in Replit), structured so it can switch to Postgres later
+
+Auth: Simple admin auth using a password in env var (no OAuth for MVP)
+
+AI: OpenAI API for generating the cooking instructions + shopping list (server-side only)
+
+Hosting: Must run with npm run dev in Replit, and also be deployable
+
+Core product requirements (MVP)
+
+This is kids-only. The user does NOT log in.
+
+Public user flow
+
+Home page: simple landing with tagline: “Meals kids actually eat.”
+
+Start screen: parent selects:
+
+Age Range: (2–5, 6–10, 10–13)
+
+Diet filters (optional): none, vegetarian, dairy-free, gluten-free
+
+Cuisine filters (optional): American, Mexican, Italian, Asian, “Any”
+
+Skill level: Easy, Intermediate, Advanced
+
+Time limit: 15 / 30 / 45 / 60 minutes
+
+After selection: show a grid of meal cards with images (use placeholder images initially, stored locally, but structure so meals can have image URLs later).
+
+Click a meal card → Meal Detail page:
+
+Show meal photo, time, skill, cuisine, kid-friendly notes
+
+Button: “Generate instructions” (AI)
+
+When clicked, call server API to generate:
+
+Step-by-step cooking instructions optimized for busy parents
+
+Kid-friendly adjustments + “optional spice for adults at the end”
+
+Substitutions for common missing items
+
+A clean shopping list grouped by: Produce, Meat, Dairy, Pantry, Spices, Frozen
+
+Tool suggestions list (knife, cutting board, thermometer, sheet pan, etc.)
+
+Display AI output nicely with headings and bullet lists
+
+“What’s in my fridge?” feature
+
+Page or section where user enters ingredients (comma separated or tags)
+
+Optional: “must use chicken” toggle
+
+It suggests 3 meals from the existing meal database and lets them generate instructions for any suggestion
+
+If ingredients don’t match anything, generate suggestions using AI but still map to a new “draft meal” object (not stored unless admin approves)
+
+Monetization requirements (must be included)
+Amazon Affiliate links
+
+Add a “Recommended Tools” section on the Meal Detail page.
+
+Each tool should have:
+
+name
+
+short 1-line why it helps parents
+
+an Amazon affiliate link placeholder
+
+Store a single environment variable AMAZON_ASSOCIATE_TAG and generate links as:
+https://www.amazon.com/s?k=<urlencoded item>&tag=<tag>
+
+Tools to include by default (at least): chef knife, kid-safe knife option, cutting board, instant-read thermometer, sheet pan, nonstick skillet, slow cooker, air fryer, cookbook for picky eaters
+
+Put a small disclosure: “As an Amazon Associate I earn from qualifying purchases.”
+
+Instacart integration (MVP placeholder, but real structure)
+
+Add a “Shop Ingredients” button.
+
+For MVP, it should generate an Instacart search URL using meal ingredients:
+
+https://www.instacart.com/store/s?k=<urlencoded ingredients>
+
+Put the code in a way that can be replaced later with real Instacart affiliate/deep-linking if available.
+
+Admin panel (protected)
+
+Route: /admin
+
+Password login using env var ADMIN_PASSWORD
+
+Admin can:
+
+Create/edit/delete meals
+
+Upload or set image URL
+
+Set tags: cuisine, skill, age ranges, dietary flags, time
+
+Approve “draft meals” created from AI ingredient suggestions (if any)
+
+Admin dashboard shows:
+
+Total meals
+
+Most viewed meals (track views)
+
+Most generated AI recipes (track generations)
+
+Data model (Prisma)
+
+Create Prisma schema including at minimum:
+
+Meal: id, title, description, cuisine, skillLevel, timeMinutes, ageRanges (array or string), dietaryFlags (array), imageUrl, ingredients (array), createdAt, updatedAt
+
+GeneratedRecipe: id, mealId, inputFiltersJson, outputJson (instructions, shoppingList, toolSuggestions), createdAt
+
+MealStats: mealId, views, aiGenerations
+
+DraftMeal (optional): id, title, ingredients, suggestedByIngredients, status (pending/approved/rejected), createdAt
+
+UI requirements (clean, parent-friendly)
+
+Mobile-first design
+
+Large tappable meal cards
+
+Minimal text, big images
+
+Fast loading, no clutter
+
+Use Tailwind with a simple neutral palette
+
+Include a sticky “Back to Meals” button on meal pages
+
+Add a loading state for AI generation (“Generating kid-friendly instructions…”)
+
+Add error handling (rate limit / missing API key)
+
+Security requirements
+
+Never expose OpenAI API key to the client
+
+AI generation must occur server-side only
+
+Basic rate limiting per IP for AI generation (simple in-memory limiter is OK for MVP)
+
+Sanitize inputs
+
+AI prompt behavior (important)
+
+When generating instructions, the AI must:
+
+be concise but detailed
+
+use numbered steps
+
+include timing cues (“5 minutes”, “while that cooks…”)
+
+assume a normal home kitchen
+
+include kid-friendly notes and substitution tips
+
+produce a shopping list grouped by category
+
+produce tool suggestions geared toward parents
+
+Environment variables
+
+Create .env.example and use these:
+
+OPENAI_API_KEY=
+
+ADMIN_PASSWORD=
+
+AMAZON_ASSOCIATE_TAG=nomnomchow-20 (placeholder)
+
+NEXT_PUBLIC_APP_NAME=Nom Nom Chow
+
+Seed data
+
+Include a seed script that inserts at least 24 kid-friendly meals across cuisines and difficulties (but still kid-friendly). Examples: sheet-pan chicken, turkey tacos, spaghetti & meat sauce, quesadillas, baked salmon bites, chicken fried rice, sloppy joes, mini meatballs, etc.
+Each meal must have:
+
+title
+
+ingredients list
+
+cuisine, skill, time, age ranges
+
+placeholder image path
+
+Project structure & scripts
+
+Provide clear README with:
+
+how to run
+
+how to set env vars in Replit
+
+how to login to admin
+
+how to reseed database
+
+npm run dev should start the app without errors
+
+Prisma migrations must run cleanly in Replit
+
+Deliverables
+
+Generate the COMPLETE codebase with all files:
+
+Next.js pages/components
+
+API routes for AI generation, meals, admin auth
+
+Prisma schema + migrations + seed
+
+Tailwind setup
+
+README
+
+.env.example
+
+Extra polish (nice-to-have but do it if possible)
+
+Add a “Favorites” feature using localStorage (no user login)
+
+Add a “Weekly Plan” view (client-side) where parents can add meals to Mon–Sun (stored in localStorage)
+
+Add SEO basics (title, meta description)
+
+Now build it.
