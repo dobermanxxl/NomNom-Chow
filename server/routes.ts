@@ -20,25 +20,33 @@ export async function registerRoutes(
 
   // === ADMIN AUTH MIDDLEWARE ===
   const requireAdmin = (req: any, res: any, next: any) => {
-    // For MVP, we can just check a header or a simple session/cookie.
-    // Since we're using a simple password login without complex auth for now:
-    // Let's assume the client sends an 'x-admin-password' header for simplicity in MVP 
-    // OR establishes a session.
-    // Actually, let's use a simple session-based approach as express-session is installed.
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminPassword) {
+      console.error("CRITICAL: ADMIN_PASSWORD environment variable is missing!");
+      return res.status(500).json({ message: "Server configuration error: Admin password not set." });
+    }
+
     if (req.session.isAdmin) {
-        return next();
+      return next();
     }
     res.status(401).json({ message: "Unauthorized" });
   };
 
   // === ADMIN ROUTES ===
   app.post(api.admin.login.path, (req, res) => {
-      const { password } = req.body;
-      if (password === process.env.ADMIN_PASSWORD) {
-          req.session.isAdmin = true;
-          return res.json({ success: true });
-      }
-      res.status(401).json({ message: "Invalid password" });
+    const { password } = req.body;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword) {
+      console.error("CRITICAL: ADMIN_PASSWORD environment variable is missing!");
+      return res.status(500).json({ message: "Server configuration error: Admin password not set." });
+    }
+
+    if (password === adminPassword) {
+      req.session.isAdmin = true;
+      return res.json({ success: true });
+    }
+    res.status(401).json({ message: "Invalid password" });
   });
 
   app.get(api.admin.stats.path, requireAdmin, async (req, res) => {
