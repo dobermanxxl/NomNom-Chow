@@ -1,0 +1,47 @@
+Add automatic AI image generation for each meal (kids-only, home-cooked style) and store the result on the meal so images are never regenerated unless explicitly requested.
+
+Requirements:
+1) Admin-only generation:
+- Only accessible from /admin (protected by ADMIN_PASSWORD).
+- Public users must NOT trigger image generation.
+
+2) UI changes:
+- In /admin meal create/edit form, add:
+  - A checkbox toggle: "Auto-generate image if missing" (default ON)
+  - A button: "Generate Image Now" (manual trigger)
+  - Show a preview thumbnail once generated.
+
+3) When saving a meal:
+- If imageUrl is empty and toggle is ON, automatically generate an image and set imageUrl.
+- If imageUrl already exists, do nothing.
+
+4) Image generation:
+- Use OpenAI Images API server-side only.
+- Prompt MUST be blanket-style and inferred automatically from the meal title + ingredients:
+  - Photorealistic, natural kitchen lighting
+  - Home-cooked weeknight meal
+  - Kid-friendly, normal portions
+  - No restaurant plating, no garnish, no studio lighting
+  - Must match the dish accurately based on title + ingredients
+- Do not hallucinate extra foods; must depict the actual meal.
+
+5) Storage:
+- Prefer Cloudinary upload if Cloudinary env vars exist:
+  - CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+  - Upload the generated image and store the returned secure URL into meal.imageUrl
+- If Cloudinary env vars are NOT set, fallback to saving the image locally:
+  - Save to /public/generated/meals/<mealId>.png (or jpg)
+  - Set imageUrl to that local path.
+
+6) Rate limiting:
+- Add a simple per-IP and per-admin-session rate limit to image generation (e.g., 10 per hour) with friendly error message.
+
+7) Prisma/data:
+- Ensure Meal has imageUrl field.
+- Add meal stats increment for image generations (optional).
+- Never store OpenAI keys client-side.
+
+8) Provide:
+- API route(s) like /api/admin/generate-meal-image
+- Utility modules for prompt construction and Cloudinary/local storage
+- Update README with setup steps and required secrets.

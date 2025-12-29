@@ -133,6 +133,22 @@ export const api = {
             }),
             401: errorSchemas.unauthorized
         }
+    },
+    generateImage: {
+      method: 'POST' as const,
+      path: '/api/admin/generate-meal-image',
+      input: z.object({
+        mealId: z.number().optional(),
+        title: z.string(),
+        ingredients: z.array(z.string()),
+      }),
+      responses: {
+        200: z.object({ imageUrl: z.string() }),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+        429: z.object({ message: z.string() }),
+        500: errorSchemas.internal,
+      }
     }
   },
   drafts: {

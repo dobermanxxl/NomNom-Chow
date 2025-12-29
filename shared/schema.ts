@@ -50,6 +50,7 @@ export const mealStats = pgTable("meal_stats", {
   mealId: integer("meal_id").references(() => meals.id).unique(),
   views: integer("views").default(0),
   aiGenerations: integer("ai_generations").default(0),
+  imageGenerations: integer("image_generations").default(0),
 });
 
 export const draftMeals = pgTable("draft_meals", {

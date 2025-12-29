@@ -34,6 +34,7 @@ export interface IStorage {
   getMealStats(mealId: number): Promise<any>; // Type appropriately
   incrementView(mealId: number): Promise<void>;
   incrementAiGeneration(mealId: number): Promise<void>;
+  incrementImageGeneration(mealId: number): Promise<void>;
   getAllStats(): Promise<any>;
 
   // Generated Recipes
@@ -130,6 +131,12 @@ export class DatabaseStorage implements IStorage {
       .set({ aiGenerations: sql`${mealStats.aiGenerations} + 1` })
       .where(eq(mealStats.mealId, mealId));
   }
+
+  async incrementImageGeneration(mealId: number): Promise<void> {
+    await db.update(mealStats)
+     .set({ imageGenerations: sql`${mealStats.imageGenerations} + 1` })
+     .where(eq(mealStats.mealId, mealId));
+ }
   
   async getAllStats(): Promise<any> {
       const stats = await db.select({
