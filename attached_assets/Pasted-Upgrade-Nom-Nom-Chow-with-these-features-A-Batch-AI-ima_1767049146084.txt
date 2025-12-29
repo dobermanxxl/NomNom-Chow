@@ -1,0 +1,74 @@
+Upgrade Nom Nom Chow with these features:
+
+A) Batch AI image generation (Admin only)
+1) Add an Admin page section: “Images”
+- Show counts: total meals, meals missing images, meals with images.
+- Add buttons:
+  - “Generate images for all meals missing images”
+  - “Regenerate image for selected meals”
+  - “Stop batch job”
+- Show a progress UI:
+  - current meal being processed
+  - # completed / total
+  - # failed
+  - list of failures with retry button
+
+2) Safety and cost control
+- Admin-only access enforced with ADMIN_PASSWORD.
+- Add rate limiting (e.g. max 30 images/hour) with a friendly message.
+- The batch job must throttle requests (e.g. 1 image every 3–5 seconds) and never fire all at once.
+- Cache: if a meal already has imageUrl, skip unless “regenerate” is chosen.
+
+3) Image generation prompt (blanket, inferred)
+- The image must be photorealistic, home-cooked, weeknight, kid-friendly.
+- No restaurant plating, no garnish, no studio lighting.
+- Must accurately match the dish using meal.title + meal.ingredients + cuisine/time/skill.
+- Must not add random extra foods.
+
+B) Lock aspect ratio & make the grid always look good
+1) All meal card images must display as 1:1 square thumbnails, cropped cleanly (object-cover).
+2) Generated images must also be stored as 1:1 square to keep consistency.
+- If using Cloudinary, apply transformations for square crop (fill, 1024x1024).
+- If local storage fallback, crop/resize server-side to 1024x1024 square before saving.
+3) Add a default fallback placeholder image if imageUrl is missing so nothing is blank.
+
+C) Add more recipes (kid-friendly)
+1) Expand the seed data to at least 80 total meals (add 50+ more).
+- Keep them truly kid-friendly and weeknight realistic.
+- Cover categories: chicken, beef, turkey, pork, fish, vegetarian, pasta, tacos, rice bowls, sheet-pan, slow-cooker, air-fryer.
+- Each meal should include: title, ingredients array, cuisine, skill level, time, age range tags, dietary flags when applicable.
+2) Also add an Admin tool: “Add Sample Meals”
+- Button that inserts an additional curated set if DB is sparse (avoid duplicates by title).
+
+D) Fix search bar so it actually returns results (e.g., “steak”)
+1) Implement a working search experience on the meals list page:
+- Search should match across:
+  - title
+  - ingredients
+  - description
+  - cuisine
+  - tags (dietaryFlags, skillLevel, ageRanges)
+- Searching “steak” should return meals with steak in title OR ingredients.
+- Add debounced input (300ms).
+- Keep filters (age range, cuisine, time, skill) working together with search.
+
+2) Backend/API
+- Add an API route like /api/meals?query=&cuisine=&skill=&maxTime=&age=&diet=
+- Implement query logic using Prisma:
+  - case-insensitive contains matches for title/description
+  - ingredient array search (contains) or join/normalized string search
+- Return results sorted by relevance:
+  - title match first, then ingredient match, then others.
+
+3) UI polish
+- Show “No results” state with suggestions.
+- Add a clear X button to reset search.
+
+E) Documentation
+- Update README with:
+  - how batch image generation works
+  - how to set Cloudinary secrets (recommended for production)
+  - how aspect ratio is enforced
+  - how search works
+
+Do all changes without breaking existing flows. Restart the app after changes.

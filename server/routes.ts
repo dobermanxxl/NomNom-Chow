@@ -6,6 +6,23 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { meals } from "@shared/schema"; // For type reference if needed
+import { generateMealImage } from "./image-service";
+
+// Simple rate limiter for image generation
+const imageRateLimits = new Map<string, { count: number; resetAt: number }>();
+const MAX_IMAGES_PER_HOUR = 10;
+
+const checkRateLimit = (id: string) => {
+  const now = Date.now();
+  const limit = imageRateLimits.get(id);
+  if (!limit || now > limit.resetAt) {
+    imageRateLimits.set(id, { count: 1, resetAt: now + 3600000 });
+    return true;
+  }
+  if (limit.count >= MAX_IMAGES_PER_HOUR) return false;
+  limit.count++;
+  return true;
+};
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -202,6 +219,28 @@ export async function registerRoutes(
      const updated = await storage.updateDraftStatus(Number(req.params.id), 'approved');
      // Logic to convert draft to meal would go here
      res.json(updated);
+  });
+
+  app.post(api.admin.generateImage.path, requireAdmin, async (req, res) => {
+    try {
+      const { mealId, title, ingredients } = api.admin.generateImage.input.parse(req.body);
+      
+      if (!checkRateLimit(req.sessionID || 'anonymous')) {
+        return res.status(429).json({ message: "Image generation limit reached (10/hour). Please try again later." });
+      }
+
+      const imageUrl = await generateMealImage(title, ingredients);
+      
+      if (mealId) {
+        await storage.updateMeal(mealId, { imageUrl });
+        await storage.incrementImageGeneration(mealId);
+      }
+
+      res.json({ imageUrl });
+    } catch (e) {
+      console.error("Image generation failed:", e);
+      res.status(500).json({ message: "Failed to generate image" });
+    }
   });
 
   return httpServer;

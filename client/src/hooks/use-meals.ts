@@ -109,6 +109,32 @@ export function useDeleteMeal() {
   });
 }
 
+export function useGenerateMealImage() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (data: { mealId?: number; title: string; ingredients: string[] }) => {
+      const res = await fetch(api.admin.generateImage.path, {
+        method: api.admin.generateImage.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to generate image");
+      }
+      return api.admin.generateImage.responses[200].parse(await res.json());
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Image Generation Failed", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    }
+  });
+}
+
 // ============================================
 // AI HOOKS
 // ============================================

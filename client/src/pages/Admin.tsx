@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useAdminLogin, useAdminStats, useDrafts, useApproveDraft } from "@/hooks/use-admin";
+import { useGenerateMealImage } from "@/hooks/use-meals";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Check, Clock, TrendingUp, Users, BookOpen, Lock } from "lucide-react";
+import { Loader2, Check, Clock, TrendingUp, Users, BookOpen, Lock, Image as ImageIcon } from "lucide-react";
 import { useLocation } from "wouter";
 
 const loginSchema = z.object({
@@ -130,15 +131,19 @@ function AdminDashboard() {
                 </p>
               </div>
               
-              <div className="mt-auto pt-4 border-t border-border flex gap-2">
+              <div className="mt-auto pt-4 border-t border-border flex flex-col gap-2">
                 <button
                   onClick={() => approveDraft.mutate(draft.id)}
                   disabled={approveDraft.isPending}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
                 >
                   {approveDraft.isPending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                   Approve
                 </button>
+                <GenerateImageButton 
+                  title={draft.title} 
+                  ingredients={draft.ingredients as string[]} 
+                />
               </div>
             </div>
           ))}
@@ -162,6 +167,35 @@ function StatsCard({ icon: Icon, label, value, color, loading }: any) {
           <p className="text-3xl font-black font-display">{value}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function GenerateImageButton({ title, ingredients, mealId }: { title: string; ingredients: string[]; mealId?: number }) {
+  const generate = useGenerateMealImage();
+  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+
+  const handleGenerate = () => {
+    generate.mutate({ title, ingredients, mealId }, {
+      onSuccess: (data) => setGeneratedUrl(data.imageUrl)
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={handleGenerate}
+        disabled={generate.isPending}
+        className="w-full bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+      >
+        {generate.isPending ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+        {generatedUrl ? "Regenerate Image" : "Generate Image"}
+      </button>
+      {generatedUrl && (
+        <div className="relative aspect-video rounded-xl overflow-hidden border border-border">
+          <img src={generatedUrl} alt="Generated" className="object-cover w-full h-full" />
+        </div>
+      )}
     </div>
   );
 }
