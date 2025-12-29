@@ -250,10 +250,30 @@ export async function registerRoutes(
     }
   });
 
+  // Helper: Check if an imageUrl is a placeholder (should be treated as missing)
+  function isPlaceholderImage(imageUrl: string | null | undefined): boolean {
+    if (!imageUrl || imageUrl.length === 0) return true;
+    const lowerUrl = imageUrl.toLowerCase();
+    // Treat as placeholder if it contains these keywords or is the default placeholder asset
+    return (
+      lowerUrl.includes('placeholder') ||
+      lowerUrl.includes('yummy') ||
+      lowerUrl.includes('illustration') ||
+      lowerUrl.endsWith('/placeholder-meal.svg') ||
+      lowerUrl.startsWith('data:image/svg') ||
+      !lowerUrl.includes('cloudinary') // If not from Cloudinary, treat as placeholder
+    );
+  }
+
+  // Helper: Check if meal has a real (non-placeholder) image
+  function hasRealImage(imageUrl: string | null | undefined): boolean {
+    return !isPlaceholderImage(imageUrl);
+  }
+
   // Image stats endpoint
   app.get(api.admin.imageStats.path, requireAdmin, async (req, res) => {
     const allMeals = await storage.getMeals();
-    const withImages = allMeals.filter(m => m.imageUrl && m.imageUrl.length > 0).length;
+    const withImages = allMeals.filter(m => hasRealImage(m.imageUrl)).length;
     res.json({
       totalMeals: allMeals.length,
       withImages,
@@ -276,7 +296,8 @@ export async function registerRoutes(
     if (mealIds && mealIds.length > 0) {
       mealsToProcess = allMeals.filter(m => mealIds.includes(m.id));
     } else if (!regenerate) {
-      mealsToProcess = allMeals.filter(m => !m.imageUrl || m.imageUrl.length === 0);
+      // Include meals with no image OR placeholder images
+      mealsToProcess = allMeals.filter(m => isPlaceholderImage(m.imageUrl));
     }
 
     if (mealsToProcess.length === 0) {
