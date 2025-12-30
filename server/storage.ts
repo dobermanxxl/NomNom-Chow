@@ -5,13 +5,17 @@ import {
   generatedRecipes,
   mealStats,
   draftMeals,
+  affiliateTools,
+  affiliateClicks,
   type Meal,
   type InsertMeal,
   type GeneratedRecipe,
   type InsertGeneratedRecipe,
   type DraftMeal,
   type InsertDraftMeal,
-  type MealResponse
+  type MealResponse,
+  type AffiliateTool,
+  type AffiliateClick
 } from "@shared/schema";
 import { eq, like, and, or, sql, desc } from "drizzle-orm";
 
@@ -45,6 +49,11 @@ export interface IStorage {
   createDraftMeal(draft: InsertDraftMeal): Promise<DraftMeal>;
   getDraftMeals(): Promise<DraftMeal[]>;
   updateDraftStatus(id: number, status: string): Promise<DraftMeal>;
+
+  // Affiliate
+  getAffiliateTools(): Promise<AffiliateTool[]>;
+  getAffiliateToolsByBundle(bundle: string): Promise<AffiliateTool[]>;
+  recordAffiliateClick(toolId: number, mealId: number | undefined, page: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -188,6 +197,22 @@ export class DatabaseStorage implements IStorage {
   async updateDraftStatus(id: number, status: string): Promise<DraftMeal> {
       const [updated] = await db.update(draftMeals).set({ status }).where(eq(draftMeals.id, id)).returning();
       return updated;
+  }
+
+  async getAffiliateTools(): Promise<AffiliateTool[]> {
+    return await db.select().from(affiliateTools);
+  }
+
+  async getAffiliateToolsByBundle(bundle: string): Promise<AffiliateTool[]> {
+    return await db.select().from(affiliateTools).where(eq(affiliateTools.bundle, bundle));
+  }
+
+  async recordAffiliateClick(toolId: number, mealId: number | undefined, page: string): Promise<void> {
+    await db.insert(affiliateClicks).values({ 
+      toolId, 
+      mealId: mealId || null, 
+      page 
+    });
   }
 }
 

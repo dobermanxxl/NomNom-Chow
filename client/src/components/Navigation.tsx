@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { UtensilsCrossed, ChefHat, Search, Lock, Heart, Calendar } from "lucide-react";
+import { UtensilsCrossed, ChefHat, Search, Lock, Heart, Calendar, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -11,6 +11,7 @@ export function Navigation() {
     { href: "/fridge", label: "My Fridge", icon: Search },
     { href: "/plan", label: "Plan", icon: Calendar },
     { href: "/favorites", label: "Faves", icon: Heart },
+    { href: "/starter-kitchen", label: "Kitchen", icon: ShoppingBag },
   ];
 
   return (

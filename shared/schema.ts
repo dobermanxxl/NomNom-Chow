@@ -33,7 +33,7 @@ export const meals = pgTable("meals", {
   ingredients: jsonb("ingredients").$type<string[]>(),
   instructions: jsonb("instructions").$type<string[]>(),
   kidFriendlyNotes: text("kid_friendly_notes"),
-  slug: text("slug").unique(),
+  slug: text("slug"),
   seoTitle: text("seo_title"),
   seoDescription: text("seo_description"),
   tags: jsonb("tags").$type<string[]>(),
@@ -61,6 +61,27 @@ export const mealPlans = pgTable("meal_plans", {
   weekStartDate: timestamp("week_start_date").notNull(),
   days: jsonb("days").$type<MealPlanDay[]>().notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const affiliateTools = pgTable("affiliate_tools", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  category: text("category").notNull(),
+  searchQuery: text("search_query").notNull(),
+  asin: text("asin"),
+  benefit: text("benefit").notNull(),
+  tags: jsonb("tags").$type<string[]>(),
+  isTopPick: boolean("is_top_pick").default(false),
+  bundle: text("bundle"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const affiliateClicks = pgTable("affiliate_clicks", {
+  id: serial("id").primaryKey(),
+  toolId: integer("tool_id").references(() => affiliateTools.id),
+  mealId: integer("meal_id").references(() => meals.id),
+  page: text("page").notNull(),
+  clickedAt: timestamp("clicked_at").defaultNow(),
 });
 
 export const generatedRecipes = pgTable("generated_recipes", {
@@ -127,6 +148,16 @@ export const insertMealPlanSchema = createInsertSchema(mealPlans).omit({
   createdAt: true
 });
 
+export const insertAffiliateToolSchema = createInsertSchema(affiliateTools).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertAffiliateClickSchema = createInsertSchema(affiliateClicks).omit({
+  id: true,
+  clickedAt: true
+});
+
 export const insertConversationSchema = createInsertSchema(conversations).omit({
   id: true,
   createdAt: true
@@ -150,6 +181,12 @@ export type InsertDraftMeal = z.infer<typeof insertDraftMealSchema>;
 
 export type MealPlan = typeof mealPlans.$inferSelect;
 export type InsertMealPlan = z.infer<typeof insertMealPlanSchema>;
+
+export type AffiliateTool = typeof affiliateTools.$inferSelect;
+export type InsertAffiliateTool = z.infer<typeof insertAffiliateToolSchema>;
+
+export type AffiliateClick = typeof affiliateClicks.$inferSelect;
+export type InsertAffiliateClick = z.infer<typeof insertAffiliateClickSchema>;
 
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;

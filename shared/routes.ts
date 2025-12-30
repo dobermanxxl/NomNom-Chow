@@ -1,8 +1,8 @@
 
 import { z } from 'zod';
-import { insertMealSchema, insertDraftMealSchema, insertGeneratedRecipeSchema, meals, generatedRecipes, draftMeals, mealStats, type CreateMealRequest, type UpdateMealRequest, type GenerateRecipeRequest, type AIResponse, type InsertDraftMeal } from './schema';
+import { insertMealSchema, insertDraftMealSchema, insertGeneratedRecipeSchema, meals, generatedRecipes, draftMeals, mealStats, affiliateTools, type CreateMealRequest, type UpdateMealRequest, type GenerateRecipeRequest, type RecipeDetails, type InsertDraftMeal, type AffiliateTool } from './schema';
 
-export type { CreateMealRequest, UpdateMealRequest, GenerateRecipeRequest, AIResponse, InsertDraftMeal };
+export type { CreateMealRequest, UpdateMealRequest, GenerateRecipeRequest, RecipeDetails, InsertDraftMeal, AffiliateTool };
 
 // ============================================
 // SHARED ERROR SCHEMAS
@@ -242,6 +242,34 @@ export const api = {
               401: errorSchemas.unauthorized
           }
       }
+  },
+  affiliate: {
+    tools: {
+      method: 'GET' as const,
+      path: '/api/affiliate/tools',
+      responses: {
+        200: z.array(z.custom<typeof affiliateTools.$inferSelect>())
+      }
+    },
+    byBundle: {
+      method: 'GET' as const,
+      path: '/api/affiliate/tools/:bundle',
+      responses: {
+        200: z.array(z.custom<typeof affiliateTools.$inferSelect>())
+      }
+    },
+    click: {
+      method: 'POST' as const,
+      path: '/api/affiliate/click',
+      input: z.object({
+        toolId: z.number(),
+        mealId: z.number().optional(),
+        page: z.string()
+      }),
+      responses: {
+        200: z.object({ success: z.boolean() })
+      }
+    }
   }
 
 };

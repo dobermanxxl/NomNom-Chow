@@ -12,6 +12,8 @@ import MealDetail from "@/pages/MealDetail";
 import Fridge from "@/pages/Fridge";
 import Favorites from "@/pages/Favorites";
 import Admin from "@/pages/Admin";
+import StarterKitchen from "@/pages/StarterKitchen";
+import WeeklyPlan from "@/pages/WeeklyPlan";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -24,8 +26,9 @@ function Router() {
         <Route path="/meal/:id" component={MealDetail} />
         <Route path="/fridge" component={Fridge} />
         <Route path="/favorites" component={Favorites} />
+        <Route path="/starter-kitchen" component={StarterKitchen} />
+        <Route path="/plan" component={WeeklyPlan} />
         <Route path="/admin" component={Admin} />
-        <Route path="/plan" component={Home} /> {/* Placeholder for plan route pointing to home for now */}
         <Route component={NotFound} />
       </Switch>
     </AnimatePresence>
