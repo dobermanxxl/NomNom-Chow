@@ -1,12 +1,36 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type CreateMealRequest, type UpdateMealRequest, type GenerateRecipeRequest, type AIResponse } from "@shared/routes";
+import {
+  api,
+  buildUrl,
+  type CreateMealRequest,
+  type UpdateMealRequest,
+  type GenerateRecipeRequest,
+  type AIResponse,
+} from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
+function apiUrl(path: string) {
+  // If path is already absolute, leave it alone
+  if (/^https?:\/\//i.test(path)) return path;
+  // If no base provided (local dev), fall back to relative
+  if (!API_BASE) return path;
+  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
 
 // ============================================
 // MEAL HOOKS
 // ============================================
 
-export function useMeals(filters?: { ageRange?: string; diet?: string; cuisine?: string; skill?: string; timeLimit?: string; search?: string }) {
+export function useMeals(filters?: {
+  ageRange?: string;
+  diet?: string;
+  cuisine?: string;
+  skill?: string;
+  timeLimit?: string;
+  search?: string;
+}) {
   // Construct query string manually since URLSearchParams doesn't handle undefined well in all envs without cleanup
   const queryParams = new URLSearchParams();
   if (filters) {
@@ -15,7 +39,7 @@ export function useMeals(filters?: { ageRange?: string; diet?: string; cuisine?:
     });
   }
   const queryString = queryParams.toString();
-  const url = `${api.meals.list.path}${queryString ? `?${queryString}` : ''}`;
+  const url = apiUrl(`${api.meals.list.path}${queryString ? `?${queryString}` : ""}`);
 
   return useQuery({
     queryKey: [api.meals.list.path, filters],
@@ -31,7 +55,7 @@ export function useMeal(id: number) {
   return useQuery({
     queryKey: [api.meals.get.path, id],
     queryFn: async () => {
-      const url = buildUrl(api.meals.get.path, { id });
+      const url = apiUrl(buildUrl(api.meals.get.path, { id }));
       const res = await fetch(url, { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch meal");
@@ -44,10 +68,10 @@ export function useMeal(id: number) {
 export function useCreateMeal() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMutation({
     mutationFn: async (data: CreateMealRequest) => {
-      const res = await fetch(api.meals.create.path, {
+      const res = await fetch(apiUrl(api.meals.create.path), {
         method: api.meals.create.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -60,9 +84,13 @@ export function useCreateMeal() {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
       toast({ title: "Yum!", description: "New meal added to the menu." });
     },
-    onError: (err) => {
-      toast({ title: "Oops!", description: err.message, variant: "destructive" });
-    }
+    onError: (err: any) => {
+      toast({
+        title: "Oops!",
+        description: err?.message || "Something went wrong",
+        variant: "destructive",
+      });
+    },
   });
 }
 
@@ -72,7 +100,7 @@ export function useUpdateMeal() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: number } & UpdateMealRequest) => {
-      const url = buildUrl(api.meals.update.path, { id });
+      const url = apiUrl(buildUrl(api.meals.update.path, { id }));
       const res = await fetch(url, {
         method: api.meals.update.method,
         headers: { "Content-Type": "application/json" },
@@ -95,10 +123,10 @@ export function useDeleteMeal() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const url = buildUrl(api.meals.delete.path, { id });
-      const res = await fetch(url, { 
+      const url = apiUrl(buildUrl(api.meals.delete.path, { id }));
+      const res = await fetch(url, {
         method: api.meals.delete.method,
-        credentials: "include" 
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete meal");
     },
@@ -111,27 +139,34 @@ export function useDeleteMeal() {
 
 export function useGenerateMealImage() {
   const { toast } = useToast();
+
   return useMutation({
     mutationFn: async (data: { mealId?: number; title: string; ingredients: string[] }) => {
-      const res = await fetch(api.admin.generateImage.path, {
+      const res = await fetch(apiUrl(api.admin.generateImage.path), {
         method: api.admin.generateImage.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: "include",
       });
+
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to generate image");
+        let message = "Failed to generate image";
+        try {
+          const err = await res.json();
+          message = err?.message || message;
+        } catch {}
+        throw new Error(message);
       }
+
       return api.admin.generateImage.responses[200].parse(await res.json());
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Image Generation Failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Image Generation Failed",
+        description: error.message,
+        variant: "destructive",
       });
-    }
+    },
   });
 }
 
@@ -142,15 +177,14 @@ export function useGenerateMealImage() {
 export function useGenerateRecipe() {
   return useMutation({
     mutationFn: async (data: GenerateRecipeRequest) => {
-      const res = await fetch(api.ai.generate.path, {
+      const res = await fetch(apiUrl(api.ai.generate.path), {
         method: api.ai.generate.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: "include",
       });
       if (!res.ok) throw new Error("AI generation failed");
-      // The response is complex (AIResponse), validating broadly as custom for now in routes
-      return await res.json() as AIResponse;
+      return (await res.json()) as AIResponse;
     },
   });
 }
@@ -158,7 +192,7 @@ export function useGenerateRecipe() {
 export function useSuggestMeals() {
   return useMutation({
     mutationFn: async (ingredients: string[]) => {
-      const res = await fetch(api.ai.suggest.path, {
+      const res = await fetch(apiUrl(api.ai.suggest.path), {
         method: api.ai.suggest.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ingredients }),
