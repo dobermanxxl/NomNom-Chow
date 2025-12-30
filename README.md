@@ -1,3 +1,4 @@
+trigger deploy
 # Nom Nom Chow - Kids Meal Picker
 
 A production-ready full-stack web application for parents seeking kid-friendly meal ideas. The app provides an image-first "pick a meal - get shopping list + instructions" experience with AI-powered recipe generation.
