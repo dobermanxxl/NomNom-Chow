@@ -1,0 +1,120 @@
+Implement a high-converting Amazon affiliate system across Nom Nom Chow (kids-only, parent-trust tone). Do NOT mention AI anywhere in the UI.
+
+GOALS:
+- Increase Amazon affiliate clicks and purchases without feeling spammy
+- Make tools highly visible (“in the forefront”) in a helpful, parent-first way
+- Add two evergreen curated bundles:
+  1) Starter Kitchen for Parents
+  2) Kid Chef Starter Kit (kid-safe tools)
+
+A) Affiliate foundation (safe + compliant)
+1) Use AMAZON_ASSOCIATE_TAG env var to build Amazon links.
+- If item has an ASIN, create a direct product URL with tag.
+- If no ASIN, use Amazon search URL with the tag:
+  https://www.amazon.com/s?k=<encodedQuery>&tag=<tag>
+2) Add rel attributes for affiliate links: rel="nofollow sponsored noopener noreferrer"
+3) Add a subtle sitewide disclosure in footer and on the Tools pages:
+  "As an Amazon Associate I earn from qualifying purchases."
+
+B) High-conversion placement (do this exactly)
+1) On EVERY meal detail page, place a “Helpful Tools for This Meal” module ABOVE the cooking steps (above the fold on mobile).
+2) The module must be OPEN by default (not collapsed).
+3) Use a conversion-optimized layout:
+- 1 “Top Pick” hero card (largest, strongest CTA)
+- 3–6 supporting tools below in a compact grid
+- Each item must have:
+  - short parent-focused benefit line (“Saves cleanup”, “No guessing chicken temp”, “Makes smashburgers easy”)
+  - a single CTA button: “View on Amazon”
+- Do NOT show prices, do NOT show star ratings, do NOT show giant product grids.
+
+4) Also add the same module to the Weekly Meal Plan results page:
+- Show “Tools that help this week” (bundle tools used across multiple meals)
+- Cap to 6 items, focusing on cross-meal utility.
+
+C) Starter Kitchen pages (evergreen, huge conversion drivers)
+Add a new top-level nav item: “Starter Kitchen”
+Create a page /starter-kitchen with two sections:
+
+1) Starter Kitchen for Parents (8–12 items)
+Curate essentials that parents actually buy, with kid-meal relevance:
+- instant-read thermometer (ThermoPop/Thermapen alternative)
+- large nonstick skillet
+- sheet pan set
+- silicone spatula set
+- chef’s knife (mid-range) + knife sharpener
+- cutting boards (color-coded or dishwasher-safe)
+- mixing bowls set
+- measuring cups/spoons
+- air fryer liners or parchment
+- food storage containers (meal prep)
+
+2) Kid Chef Starter Kit (8–12 items)
+Curate kid-safe, parent-approved items:
+- kid-safe nylon/plastic knife set (e.g., Montessori knives)
+- crinkle cutter
+- kid apron set
+- child-safe peelers
+- small cutting board for kids
+- mixing set for kids (bowls/whisks)
+- mini rolling pin
+- cookie cutters
+- small step stool (kitchen helper)
+- reusable squeeze bottles (sauces)
+Make each item’s copy emphasize safety + participation + fun.
+
+Each bundle page must:
+- Show a short intro paragraph (trust-building, not sales)
+- Show cards with image placeholder (optional), title, 1 benefit line, and “View on Amazon”
+- Include “Why this helps busy parents” section
+- Include FAQ: “Do I need all this?” (answer: no, start with top 3)
+
+D) Data + admin controls
+1) Add a simple JSON/DB-backed “Affiliate Catalog” so tools are reusable across meals and pages.
+Each catalog item:
+- id, title, category, searchQuery, asin (optional), benefit, tags (e.g. picky-eater, gluten-free cooking, air-fryer)
+2) Add Admin UI:
+- Manage Affiliate Catalog items
+- Select:
+  - default “Top Picks” (sitewide)
+  - per-meal overrides (optional)
+- If no per-meal overrides exist, auto-select tools based on meal attributes (e.g., burgers => burger press/spatula/thermometer; sheet-pan => sheet pan + parchment; pasta => pot + strainer).
+3) Track click events (internal analytics table):
+- toolId, mealId (optional), page (meal/starter-kitchen/plan), timestamp
+No personal data required.
+
+E) Copy + tone (no “AI”)
+- Never say “recommended by AI” or “generated”
+- Use language like:
+  “Helpful if you want dinner done fast.”
+  “Parents use this to avoid guessing.”
+  “Optional—but makes cleanup easier.”
+- Make CTAs consistent: “View on Amazon”
+
+F) SEO (optimize always)
+1) Add SEO titles/descriptions for:
+- /starter-kitchen
+- /starter-kitchen/parents
+- /starter-kitchen/kid-chef
+Use keywords naturally:
+“kid-friendly cooking tools”, “kitchen essentials for parents”, “kid safe knives”, “kids cooking starter kit”
+2) Add internal links from:
+- home page
+- meal pages (small link: “Build your starter kitchen”)
+- plan page (small link: “Tools that help this week”)
+
+G) UI: keep tools “in the forefront” without looking spammy
+- Meal detail page layout order:
+  1) Title + image
+  2) Quick stats (time, skill, picky-eater-approved, gluten-free)
+  3) Ingredients list + “Add to Shopping List”
+  4) Helpful Tools module (open)
+  5) Cooking steps
+- Weekly plan page:
+  - At top: “This week’s plan”
+  - Immediately below: “Tools that help this week” module
+
+Implementation notes:
+- Use the existing React/Next (or current stack) components and styling system.
+- Ensure mobile-first layout and fast load (lazy load any images).
+- Do not break existing meal flows.
+- After implementing, restart and republish.

@@ -132,18 +132,17 @@ export async function registerRoutes(
       res.status(204).send();
   });
 
-  // === AI ROUTES ===
+  // === RECIPE GENERATION ROUTES ===
   app.post(api.ai.generate.path, async (req, res) => {
       try {
           const { mealId, ageRange, dietaryFilters } = req.body;
           const meal = await storage.getMeal(mealId);
           if (!meal) return res.status(404).json({ message: "Meal not found" });
 
-          // Increment generation stats
-          storage.incrementAiGeneration(mealId).catch(console.error);
+          storage.incrementRecipeGeneration(mealId).catch(console.error);
 
           const prompt = `
-            Generate a detailed, kid-friendly cooking guide for "${meal.title}".
+            Create a detailed, kid-friendly cooking guide for "${meal.title}".
             Target Audience: Busy parents with kids aged ${ageRange}.
             Dietary Needs: ${dietaryFilters?.join(', ') || 'None'}.
             
@@ -166,20 +165,17 @@ export async function registerRoutes(
           `;
 
           const response = await openai.chat.completions.create({
-              model: "gpt-5.1", // Or appropriate model
+              model: "gpt-5.1",
               messages: [{ role: "system", content: "You are a helpful cooking assistant for parents." }, { role: "user", content: prompt }],
               response_format: { type: "json_object" }
           });
 
           const content = JSON.parse(response.choices[0].message.content || "{}");
-          
-          // Save generated recipe (optional, skipped for MVP simplicity, just returning)
-          // await storage.createGeneratedRecipe(...) 
 
           res.json(content);
       } catch (e) {
-          console.error("AI Generation failed:", e);
-          res.status(500).json({ message: "AI generation failed" });
+          console.error("Recipe generation failed:", e);
+          res.status(500).json({ message: "Failed to create recipe. Please try again." });
       }
   });
   
@@ -198,9 +194,7 @@ export async function registerRoutes(
               response_format: { type: "json_object" }
           });
           
-          // OpenAI json_object response might wrap array in a key, handle broadly
           const content = JSON.parse(response.choices[0].message.content || "{}");
-          // Expecting { "meals": [...] } or similar, let's normalize
           const suggestions = content.meals || content.suggestions || [];
           
           res.json(suggestions);

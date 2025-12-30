@@ -25,16 +25,42 @@ export const meals = pgTable("meals", {
   title: text("title").notNull(),
   description: text("description"),
   cuisine: text("cuisine"),
-  skillLevel: text("skill_level"), // 'Easy', 'Intermediate', 'Advanced'
+  skillLevel: text("skill_level"),
   timeMinutes: integer("time_minutes").notNull(),
-  ageRanges: jsonb("age_ranges").$type<string[]>(), // e.g. ["2-5", "6-10"]
-  dietaryFlags: jsonb("dietary_flags").$type<string[]>(), // e.g. ["vegetarian", "gluten-free"]
+  ageRanges: jsonb("age_ranges").$type<string[]>(),
+  dietaryFlags: jsonb("dietary_flags").$type<string[]>(),
   imageUrl: text("image_url"),
-  ingredients: jsonb("ingredients").$type<string[]>(), // Simple array of strings
-  instructions: jsonb("instructions").$type<string[]>(), // Array of steps
-  kidFriendlyNotes: text("kid_friendly_notes"), // Specific notes for kids
+  ingredients: jsonb("ingredients").$type<string[]>(),
+  instructions: jsonb("instructions").$type<string[]>(),
+  kidFriendlyNotes: text("kid_friendly_notes"),
+  slug: text("slug").unique(),
+  seoTitle: text("seo_title"),
+  seoDescription: text("seo_description"),
+  tags: jsonb("tags").$type<string[]>(),
+  amazonRecommendations: jsonb("amazon_recommendations").$type<AmazonRecommendation[]>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export interface AmazonRecommendation {
+  title: string;
+  category: string;
+  asin?: string;
+  searchQuery: string;
+  affiliateUrl?: string;
+  whyThisHelps: string;
+}
+
+export interface MealPlanDay {
+  dayName: string;
+  mealId: number;
+}
+
+export const mealPlans = pgTable("meal_plans", {
+  id: serial("id").primaryKey(),
+  weekStartDate: timestamp("week_start_date").notNull(),
+  days: jsonb("days").$type<MealPlanDay[]>().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const generatedRecipes = pgTable("generated_recipes", {
@@ -96,6 +122,11 @@ export const insertDraftMealSchema = createInsertSchema(draftMeals).omit({
   createdAt: true
 });
 
+export const insertMealPlanSchema = createInsertSchema(mealPlans).omit({
+  id: true,
+  createdAt: true
+});
+
 export const insertConversationSchema = createInsertSchema(conversations).omit({
   id: true,
   createdAt: true
@@ -117,6 +148,9 @@ export type InsertGeneratedRecipe = z.infer<typeof insertGeneratedRecipeSchema>;
 export type DraftMeal = typeof draftMeals.$inferSelect;
 export type InsertDraftMeal = z.infer<typeof insertDraftMealSchema>;
 
+export type MealPlan = typeof mealPlans.$inferSelect;
+export type InsertMealPlan = z.infer<typeof insertMealPlanSchema>;
+
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
@@ -137,7 +171,7 @@ export interface GenerateRecipeRequest {
   dietaryFilters?: string[];
 }
 
-export interface AIResponse {
+export interface RecipeDetails {
   instructions: string[];
   kidFriendlyAdjustments: string[];
   optionalSpice: string;

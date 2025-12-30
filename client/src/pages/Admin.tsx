@@ -131,7 +131,7 @@ function AdminDashboard() {
           />
           <StatsCard 
             icon={TrendingUp} 
-            label="AI Generations" 
+            label="Recipes Created" 
             value={stats?.mostGenerated?.[0]?.aiGenerations || 0} 
             color="bg-primary" 
             loading={statsLoading} 

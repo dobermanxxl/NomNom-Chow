@@ -1,0 +1,100 @@
+Upgrade Nom Nom Chow to be SEO-optimized, monetize-ready, and add meal planning. Also bulk-add meals with proper tags and images.
+
+A) Data model upgrades (Prisma + DB)
+1) Add/ensure fields on Meal:
+- seoTitle (string)
+- seoDescription (string)
+- slug (unique string)
+- tags (string[])  // include "picky-eater-approved", "gluten-free", etc.
+- dietaryFlags (string[]) // e.g. ["gluten-free", "dairy-free"]
+- amazonRecommendations (JSON or array) containing:
+  - title
+  - category (knife, cutting board, thermometer, air fryer, skillet, etc.)
+  - asin (optional)
+  - searchQuery (string)
+  - affiliateUrl (string or computed)
+  - whyThisHelps (string)
+- imageUrl (string)
+- cuisine, skillLevel, cookTime, ingredients, description (existing)
+
+2) Add MealPlan model:
+- id
+- weekStartDate
+- days (JSON) containing 7 entries with:
+  - dayName
+  - mealId
+- createdAt
+
+B) SEO (always-on)
+1) Meal slugs:
+- Generate a clean slug from title (kid-friendly-smashburger)
+- Ensure uniqueness (append -2 etc.)
+2) Page metadata:
+- Home page: title, meta description optimized for "kids dinner ideas", "picky eater meals", "weeknight dinners"
+- Meal detail page: use seoTitle + seoDescription and OpenGraph tags (og:title, og:description, og:image)
+- Add canonical URLs using the slug
+3) Structured data:
+- Add JSON-LD schema.org Recipe markup on meal detail pages:
+  - name, description, image, totalTime, recipeIngredient, recipeInstructions (if available), keywords/tags
+4) Internal linking:
+- On meal pages, show "Related Meals" links based on cuisine/tags.
+5) Performance:
+- Ensure images are lazy-loaded and sized correctly.
+
+C) Monetization (Amazon affiliate + Instacart-ready)
+1) Amazon affiliate:
+- Add a “Recommended Tools & Ingredients” section on each meal page.
+- Use AMAZON_ASSOCIATE_TAG env var.
+- If ASIN is not available, build an Amazon search URL using searchQuery:
+  https://www.amazon.com/s?k=<encodedQuery>&tag=<AMAZON_ASSOCIATE_TAG>
+- Include 3–6 items per recipe (thermometer, skillet, sheet pan, kid knives, etc.) appropriate to the meal.
+- Add a small disclosure: "As an Amazon Associate I earn from qualifying purchases."
+2) Instacart placeholder:
+- Add a “Send Shopping List to Instacart” button (placeholder integration).
+- For now, build a shareable shopping list page with copy-to-clipboard and “Open Instacart” link.
+
+D) Weekly Meal Plan Generator
+1) Create a new page: /plan
+- User selects preferences:
+  - picky eater friendly (toggle)
+  - gluten-free (toggle)
+  - cuisine preferences
+  - max cook time
+- Generate a 7-day plan using meals in DB that match filters.
+- Show each day’s meal card with image.
+- Create a combined shopping list for the week (dedupe ingredients).
+- Allow “Regenerate day” or “Swap meal” per day.
+- Save plans to MealPlan table (optional)
+2) Add a CTA on home page: “Generate this week’s plan”
+
+E) Bulk add meals + images (curated, kid-friendly)
+1) Add 30 NEW meals (no duplicates) across:
+- Smashburgers + American kid favorites
+- Italian (pasta, meatballs, baked dishes)
+- Asian-inspired (VERY mild, no spice)
+- Salmon/fish (simple)
+- Noodles (kid-safe)
+2) Tagging rules:
+- Add "picky-eater-approved" tag ONLY when the meal is truly simple, familiar flavors, minimal mixed textures.
+- Add gluten-free meals and/or dietaryFlags where valid (use GF substitutes explicitly, e.g. tamari instead of soy sauce, GF pasta, corn tortillas).
+- Ensure at least 6 meals are truly gluten-free.
+3) SEO rules per meal:
+- Title should be searchable (“Kid-Friendly Smashburgers”, “Easy Chicken Alfredo for Kids”)
+- seoTitle should include a primary keyword ("kid-friendly", "easy weeknight", etc.) but still sound natural.
+- seoDescription should be 140–160 chars, parent-focused, include 1–2 keywords.
+- Slug generated automatically from title.
+4) Images:
+- For each new meal, auto-generate one photorealistic home-cooked kid-friendly image.
+- 1024x1024 square.
+- Upload to Cloudinary and store secure_url in imageUrl.
+- IMPORTANT: Placeholder images should count as missing; generate real images for any placeholders too.
+
+F) Admin improvements
+1) Admin -> Meals:
+- Show tags, dietary flags, and an “SEO status” indicator.
+2) Admin -> Images:
+- “Generate missing images” should include placeholder images.
+3) Admin -> Plans:
+- Allow viewing saved meal plans (optional).
+
+Apply all changes, run migrations, seed meals, generate images (throttled), then restart and republish.

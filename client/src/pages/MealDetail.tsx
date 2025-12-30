@@ -4,7 +4,7 @@ import { useRoute } from "wouter";
 import { Loader2, ArrowLeft, ShoppingCart, ChefHat, Sparkles, Check, Baby, Utensils } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { type AIResponse } from "@shared/schema";
+import { type RecipeDetails } from "@shared/schema";
 
 export default function MealDetail() {
   const [, params] = useRoute("/meal/:id");
@@ -13,12 +13,7 @@ export default function MealDetail() {
   const generateRecipe = useGenerateRecipe();
   
   const [activeTab, setActiveTab] = useState<'instructions' | 'shopping' | 'tools'>('instructions');
-  const [aiData, setAiData] = useState<AIResponse | null>(null);
-
-  // Auto-generate recipe content when meal loads if not already there
-  // In a real app we'd cache this in the generatedRecipes table.
-  // For this demo, we'll let user click a button to save tokens, or auto-load.
-  // Let's make it a button for "AI Chef Mode"
+  const [recipeData, setRecipeData] = useState<RecipeDetails | null>(null);
   
   const handleGenerate = () => {
     if (!meal) return;
@@ -27,7 +22,7 @@ export default function MealDetail() {
       ageRange: (meal.ageRanges as string[])?.[0] || "5-9",
       dietaryFilters: (meal.dietaryFlags as string[]) || [],
     }, {
-      onSuccess: (data) => setAiData(data)
+      onSuccess: (data) => setRecipeData(data)
     });
   };
 
@@ -83,13 +78,14 @@ export default function MealDetail() {
               </p>
             </div>
             
-            {!aiData && !generateRecipe.isPending && (
+            {!recipeData && !generateRecipe.isPending && (
               <button 
                 onClick={handleGenerate}
                 className="btn-primary flex items-center gap-2 whitespace-nowrap shadow-xl shadow-primary/20 animate-bounce-subtle"
+                data-testid="button-get-recipe"
               >
                 <Sparkles size={20} />
-                <span>Ask AI Chef</span>
+                <span>Get Full Recipe</span>
               </button>
             )}
           </div>
@@ -97,10 +93,10 @@ export default function MealDetail() {
           {generateRecipe.isPending ? (
             <div className="py-20 text-center space-y-4">
               <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
-              <h3 className="text-xl font-bold font-display animate-pulse">Consulting the tiny chefs...</h3>
-              <p className="text-muted-foreground">Generating kid-friendly instructions just for you.</p>
+              <h3 className="text-xl font-bold font-display animate-pulse">Preparing your recipe...</h3>
+              <p className="text-muted-foreground">Creating kid-friendly instructions just for you.</p>
             </div>
-          ) : !aiData ? (
+          ) : !recipeData ? (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
                <div className="space-y-6">
                  <h3 className="text-2xl font-display font-bold">Ingredients</h3>
@@ -121,7 +117,7 @@ export default function MealDetail() {
                    <h3 className="text-xl font-display font-bold">Kid-Friendly Tips</h3>
                  </div>
                  <p className="text-muted-foreground leading-relaxed">
-                   {meal.kidFriendlyNotes || "Click 'Ask AI Chef' above to get personalized adjustments for picky eaters, detailed step-by-step guides, and shopping lists!"}
+                   {meal.kidFriendlyNotes || "Click 'Get Full Recipe' above for personalized picky-eater tips, detailed step-by-step instructions, and organized shopping lists!"}
                  </p>
                </div>
              </div>
@@ -171,7 +167,7 @@ export default function MealDetail() {
                           For Picky Eaters
                         </h4>
                         <ul className="space-y-2">
-                          {aiData.kidFriendlyAdjustments.map((adj, i) => (
+                          {recipeData.kidFriendlyAdjustments.map((adj, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm md:text-base font-medium text-foreground/80">
                               <Check size={16} className="text-secondary mt-1 flex-shrink-0" />
                               {adj}
@@ -182,7 +178,7 @@ export default function MealDetail() {
 
                       {/* Steps */}
                       <div className="space-y-6">
-                        {aiData.instructions.map((step, i) => (
+                        {recipeData.instructions.map((step, i) => (
                           <div key={i} className="flex gap-4 group">
                             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 text-primary font-display font-bold text-lg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                               {i + 1}
@@ -196,7 +192,7 @@ export default function MealDetail() {
 
                   {activeTab === 'shopping' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {Object.entries(aiData.shoppingList).map(([category, items]) => (
+                      {Object.entries(recipeData.shoppingList).map(([category, items]) => (
                         items.length > 0 && (
                           <div key={category} className="bg-muted/30 rounded-2xl p-5">
                             <h4 className="font-display font-bold text-lg capitalize mb-3 text-muted-foreground">{category}</h4>
@@ -227,7 +223,7 @@ export default function MealDetail() {
 
                   {activeTab === 'tools' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {aiData.toolSuggestions.map((tool, i) => (
+                      {recipeData.toolSuggestions.map((tool, i) => (
                         <a 
                           key={i}
                           href={`https://www.amazon.com/s?k=${encodeURIComponent(tool.name)}&tag=nomnomchow-20`}
